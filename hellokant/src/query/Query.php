@@ -11,11 +11,13 @@ class Query
     private $where = null;
     private $args = [];
     public $sql = '';
+    private $config;
 
 
-    public function __construct($sqltable)
+    public function __construct($sqltable, $config = null)
     {
         $this->sqltable = $sqltable;
+        $this->config = $config;
     }
 
     public static function table($table)
@@ -31,8 +33,8 @@ class Query
             $this->where .= ' AND ';
         }
         $this->where = $champ . ' ' . $comparaison . ' ' . $valeur;
-        $config = parse_ini_file("../connection/conf.ini");
-        $connection = ConnectionFactory::makeConnection($config); //\hellokant\connection\ConnectionFactory::makeConnection($config);
+        //$config = parse_ini_file("../connection/conf.ini");
+        $connection = ConnectionFactory::makeConnection($this->config); //\hellokant\connection\ConnectionFactory::makeConnection($config);
         //do the where request on the database
         $sql = "SELECT * FROM $this->sqltable WHERE $this->where";
         $stmt = $connection->prepare($sql);
@@ -45,13 +47,17 @@ class Query
 
     public function get()
     {
-        $this->sql = "SELECT {$this->fields} FROM {$this->sqltable}";
-        if ($this->where != null) {
-            $this->sql .= " WHERE {$this->where}";
+        $this->sql = 'SELECT ' . $this->fields . ' FROM ' . $this->sqltable;
+        if (!is_null($this->where)) {
+            $this->sql .= ' WHERE ' . $this->where;
             //$this->args[] = $this->where[2];
 
         }
-        return $this->sql;
+        $connection = ConnectionFactory::makeConnection($this->config);
+        var_dump($this->sql);
+        $stmt = $connection->prepare($this->sql);
+        $stmt->execute($this->args);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
     public function select($fields)
@@ -67,25 +73,35 @@ class Query
             $this->sql .= " WHERE {$this->where}";
             // $this->args[] = $this->where[2];
             //do the delete request on the database
-            $config = parse_ini_file("../connection/conf.ini");
-            $connection = ConnectionFactory::makeConnection($config);
+            //$config = parse_ini_file("../connection/conf.ini");
+            $connection = ConnectionFactory::makeConnection($this->config);
             $stmt = $connection->prepare($this->sql);
             $stmt->execute();
             echo ("<br>deleted");
         }
     }
 
-    public function insert($values)
+    public function insert(array $valeurs)
     {
 
-        $this->sql = "INSERT INTO {$this->sqltable} ({$this->fields}) VALUES ({$values});";
-        var_dump($this->sql);
-        var_dump($values);
-        $config = parse_ini_file("../connection/conf.ini");
-        $connection = ConnectionFactory::makeConnection($config);
+        $this->sql = "INSERT INTO " . $this->sqltable;
+        $champs = [];
+        $values = [];
+        foreach ($valeurs as $valeur => $value) {
+            $champs[] = $valeur;
+            $values[] = ' ? ';
+            $this->args[] = $value;
+        }
+        $this->sql .= '(' . implode(',', $champs) . ')' .
+            'values (' . implode(',', $values) . ')';
+        //var_dump($this->sql);
+        //var_dump($values);
+        //$config = parse_ini_file("../connection/conf.ini");
+        $connection = ConnectionFactory::makeConnection($this->config);
         $stmt = $connection->prepare($this->sql);
-        $stmt->execute();
-        echo ("<br>insertion effectué");
+        $stmt->execute($this->args);
+        echo ("insertion effectué");
+        return (int)$connection->lastInsertId($this->sqltable);
     }
 
     public function getField()
@@ -97,12 +113,18 @@ class Query
     {
         $this->fields = $fields;
     }
+
+
+    public function __toString()
+    {
+        return $this->sql;
+    }
 }
 
 require_once '../../../vendor/autoload.php';
-$query = new Query('test');
+// $query = new Query('test');
 //Delete
-//$query->where('id', '=', 5);
+//$query->where('id', '=', 5, parse_ini_file("../connection/conf.ini"));
 //$query->delete();
 
 // Insert
