@@ -17,9 +17,9 @@ use \PDO;
  */
 class ConnectionFactory {
 
-    private static $config;
+    private static $config ;
     private static $db = null;
-
+    
 
     /**
      *   makeConnection() : fabrique une instance PDO
@@ -48,9 +48,14 @@ class ConnectionFactory {
       $pass = self::$config['db_password'];
       $port = ((isset(self::$config['dbport'])) ? self::$config['dbport'] : null);
 
+      //echo("dbtype = $dbtype, host = $host, dbname = $dbname, user = $user, pass = $pass, port = $port");
+
       $dsn = "$dbtype:host=$host;dbname=$dbname";
+
+      
       //if (!empty($port)) $dsn .= "port=$port;";
-      $dsn .= "dbname=$dbname";
+
+      
       try {
           self::$db = new PDO($dsn, $user, $pass, array( PDO::ATTR_PERSISTENT => true ,
                                                          PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION ,
@@ -58,9 +63,10 @@ class ConnectionFactory {
                                                          PDO::ATTR_STRINGIFY_FETCHES => false));
 
           self::$db->prepare('SET NAMES \'UTF8\'')->execute();
+          echo("vous êtes connecté à la base de données");
 
       } catch (\PDOException $e) {
-          throw new DBException("connection: $dsn  " . $e->getMessage() . '<br/>');
+          echo($e->getMessage());//throw new DBException("connection: $dsn  " . $e->getMessage() . '<br/>');
       }
 
       return self::$db;
@@ -82,3 +88,5 @@ class ConnectionFactory {
  
 
 }
+$config = parse_ini_file("conf.ini");
+$connection = ConnectionFactory::makeConnection($config);

@@ -8,4 +8,7 @@
    */
 namespace hellokant\connection;
 
-class DBException extends \Exception {}
+class DBException extends \Exception 
+{
+  
+}
